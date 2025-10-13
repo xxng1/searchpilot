@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
       - name: frontend
-        image: xxng1/searchpilot-frontend:latest
+        image: xxng/searchpilot-frontend:latest
         ports:
         - containerPort: 3000
         env:
