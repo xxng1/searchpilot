@@ -1,0 +1,27 @@
+# FastAPI Core
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+pydantic==2.5.0
+pydantic-settings==2.1.0
+
+# Database
+aiomysql==0.2.0
+sqlalchemy==2.0.23
+asyncmy==0.2.9
+
+# Testing
+pytest==7.4.3
+pytest-asyncio==0.21.1
+pytest-cov==4.1.0
+pytest-xdist==3.5.0
+httpx==0.25.2
+faker==20.1.0
+
+# Monitoring
+prometheus-client==0.19.0
+prometheus-fastapi-instrumentator==6.1.0
+
+# Utilities
+python-dotenv==1.0.0
+python-multipart==0.0.6
+

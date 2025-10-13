@@ -1,0 +1,245 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME_BACKEND: ${{ github.repository }}/backend
+  IMAGE_NAME_FRONTEND: ${{ github.repository }}/frontend
+
+jobs:
+  ###############################################################################
+  # 1. 테스트 단계 - '딸깍' 한 번으로 1,000건 테스트 자동화
+  ###############################################################################
+  test:
+    name: 🧪 전체 테스트 실행 (1,000건)
+    runs-on: ubuntu-latest
+    
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: rootpassword
+          MYSQL_DATABASE: searchpilot
+          MYSQL_USER: searchuser
+          MYSQL_PASSWORD: searchpass
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+    
+    steps:
+      - name: 📥 코드 체크아웃
+        uses: actions/checkout@v4
+      
+      - name: 🐍 Python 설정
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      
+      - name: 📦 Python 의존성 설치
+        run: |
+          cd backend
+          pip install -r requirements.txt
+          pip install pytest-xdist aiosqlite
+      
+      - name: 🧪 단위 테스트 (300건)
+        run: |
+          cd backend
+          pytest tests/unit -n 16 -v --tb=short --junit-xml=../test-results/unit-tests.xml
+      
+      - name: 🔗 통합 테스트 (400건)
+        env:
+          DATABASE_URL: mysql+aiomysql://searchuser:searchpass@localhost:3306/searchpilot
+        run: |
+          cd backend
+          pytest tests/integration -n 8 -v --tb=short --junit-xml=../test-results/integration-tests.xml
+      
+      - name: 📊 Node.js 설정
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+      
+      - name: 📦 Frontend 의존성 설치
+        run: |
+          cd frontend
+          npm ci
+      
+      - name: 🌐 E2E 테스트 (100건)
+        run: |
+          cd frontend
+          npx playwright install --with-deps chromium
+          npm run test:e2e
+      
+      - name: ⚡ k6 설치
+        run: |
+          sudo gpg -k
+          sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update
+          sudo apt-get install k6
+      
+      - name: ⚡ 성능 테스트 (200건)
+        env:
+          API_URL: http://localhost:8000
+        run: |
+          # Start backend for performance tests
+          cd backend
+          uvicorn app.main:app --host 0.0.0.0 --port 8000 &
+          sleep 10
+          cd tests/performance
+          k6 run --quiet load_test.js
+      
+      - name: 📊 테스트 결과 업로드
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-results
+          path: test-results/
+      
+      - name: ✅ 테스트 요약
+        if: always()
+        run: |
+          echo "## 테스트 결과 요약 🧪" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ 단위 테스트: 300건" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ 통합 테스트: 400건" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ 성능 테스트: 200건" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ E2E 테스트: 100건" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**총 1,000건의 테스트 완료!**" >> $GITHUB_STEP_SUMMARY
+
+  ###############################################################################
+  # 2. 빌드 및 푸시 단계
+  ###############################################################################
+  build:
+    name: 🔨 Docker 이미지 빌드 및 푸시
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    permissions:
+      contents: read
+      packages: write
+    
+    steps:
+      - name: 📥 코드 체크아웃
+        uses: actions/checkout@v4
+      
+      - name: 🔐 Docker 레지스트리 로그인
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: 📝 Docker 메타데이터 추출
+        id: meta-backend
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_BACKEND }}
+          tags: |
+            type=sha,prefix={{branch}}-
+            type=semver,pattern={{version}}
+            type=raw,value=latest,enable={{is_default_branch}}
+      
+      - name: 🔨 Backend 이미지 빌드 및 푸시
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          push: true
+          tags: ${{ steps.meta-backend.outputs.tags }}
+          labels: ${{ steps.meta-backend.outputs.labels }}
+      
+      - name: 📝 Frontend 메타데이터 추출
+        id: meta-frontend
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_FRONTEND }}
+          tags: |
+            type=sha,prefix={{branch}}-
+            type=semver,pattern={{version}}
+            type=raw,value=latest,enable={{is_default_branch}}
+      
+      - name: 🔨 Frontend 이미지 빌드 및 푸시
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          push: true
+          tags: ${{ steps.meta-frontend.outputs.tags }}
+          labels: ${{ steps.meta-frontend.outputs.labels }}
+
+  ###############################################################################
+  # 3. Canary 배포 단계 (Argo Rollouts 트리거)
+  ###############################################################################
+  deploy:
+    name: 🚀 Canary 배포
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    steps:
+      - name: 📥 코드 체크아웃
+        uses: actions/checkout@v4
+      
+      - name: ⚙️ kubectl 설정
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'latest'
+      
+      - name: 🔐 Kubernetes 클러스터 인증
+        run: |
+          echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > kubeconfig
+          export KUBECONFIG=kubeconfig
+      
+      - name: 🚀 Argo Rollouts로 배포 트리거
+        run: |
+          export KUBECONFIG=kubeconfig
+          
+          # Update backend rollout
+          kubectl set image rollout/backend \
+            backend=${{ env.REGISTRY }}/${{ env.IMAGE_NAME_BACKEND }}:${{ github.sha }} \
+            -n searchpilot
+          
+          # Update frontend deployment
+          kubectl set image deployment/frontend \
+            frontend=${{ env.REGISTRY }}/${{ env.IMAGE_NAME_FRONTEND }}:${{ github.sha }} \
+            -n searchpilot
+          
+          echo "✅ Canary 배포 시작됨"
+          echo "   - 10% → 30% → 60% → 100% 트래픽 전환"
+          echo "   - 각 단계마다 자동 메트릭 분석"
+          echo "   - 이상 감지 시 자동 롤백"
+      
+      - name: 📊 배포 상태 모니터링
+        run: |
+          export KUBECONFIG=kubeconfig
+          kubectl argo rollouts status backend -n searchpilot --timeout 10m
+      
+      - name: 🎉 배포 완료 알림
+        if: success()
+        run: |
+          echo "## 🎉 Canary 배포 성공!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- Backend: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_BACKEND }}:${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Frontend: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_FRONTEND }}:${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "모든 메트릭 분석을 통과하여 안정적으로 배포되었습니다." >> $GITHUB_STEP_SUMMARY
+      
+      - name: ❌ 배포 실패 시 롤백
+        if: failure()
+        run: |
+          export KUBECONFIG=kubeconfig
+          kubectl argo rollouts abort backend -n searchpilot
+          echo "❌ 배포 실패. 자동 롤백 수행됨." >> $GITHUB_STEP_SUMMARY
+

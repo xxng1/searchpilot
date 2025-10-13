@@ -1,0 +1,91 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: backend
+  namespace: searchpilot
+spec:
+  replicas: 5
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+        version: stable
+    spec:
+      containers:
+      - name: backend
+        image: searchpilot/backend:latest
+        ports:
+        - containerPort: 8000
+          name: http
+        env:
+        - name: DATABASE_URL
+          value: "mysql+aiomysql://searchuser:searchpass@mysql:3306/searchpilot"
+        - name: CORS_ORIGINS
+          value: "http://localhost:3000,http://frontend"
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+  strategy:
+    canary:
+      # Canary 배포 단계 정의
+      steps:
+      - setWeight: 10  # 10% 트래픽
+      - pause: {duration: 2m}  # 2분 대기
+      - analysis:
+          templates:
+          - templateName: success-rate
+          args:
+          - name: service-name
+            value: backend
+      - setWeight: 30  # 30% 트래픽
+      - pause: {duration: 2m}
+      - analysis:
+          templates:
+          - templateName: success-rate
+          - templateName: latency
+          args:
+          - name: service-name
+            value: backend
+      - setWeight: 60  # 60% 트래픽
+      - pause: {duration: 2m}
+      - analysis:
+          templates:
+          - templateName: success-rate
+          - templateName: latency
+          args:
+          - name: service-name
+            value: backend
+      - setWeight: 100  # 100% 트래픽
+      
+      # 트래픽 라우팅
+      trafficRouting:
+        nginx:
+          stableIngress: backend-stable
+      
+      # 자동 프로모션
+      autoPromotionEnabled: true
+      autoPromotionSeconds: 300
+      
+      # 실패 시 자동 롤백
+      abortScaleDownDelaySeconds: 30
+
