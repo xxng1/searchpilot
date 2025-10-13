@@ -13,6 +13,13 @@ spec:
   - host: searchpilot.local
     http:
       paths:
+      - path: /api
+        pathType: Prefix
+        backend:
+          service:
+            name: backend
+            port:
+              number: 8000
       - path: /docs
         pathType: Prefix
         backend:
@@ -28,6 +35,13 @@ spec:
             port:
               number: 8000
       - path: /openapi.json
+        pathType: Prefix
+        backend:
+          service:
+            name: backend
+            port:
+              number: 8000
+      - path: /metrics
         pathType: Prefix
         backend:
           service:
