@@ -22,9 +22,9 @@ spec:
         - containerPort: 8000
         env:
         - name: DATABASE_URL
-          value: "mysql+asyncmy://searchpilot:searchpilot123@host.docker.internal:3306/searchpilot"
-        - name: REDIS_URL
-          value: "redis://host.docker.internal:6379"
+          value: "mysql+asyncmy://searchuser:searchpass@host.docker.internal:3306/searchpilot"
+        - name: CORS_ORIGINS
+          value: "http://localhost:3000"
         resources:
           requests:
             memory: "256Mi"
