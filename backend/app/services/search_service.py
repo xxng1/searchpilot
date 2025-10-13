@@ -110,9 +110,14 @@ class SearchService:
         result = await self.db.execute(popular_stmt)
         popular = [row[0] for row in result.fetchall()]
         
-        # Recent queries
-        recent_stmt = select(SearchLog.query).distinct().order_by(
-            SearchLog.created_at.desc()
+        # Recent queries - using subquery to avoid DISTINCT/ORDER BY conflict
+        recent_stmt = select(
+            SearchLog.query,
+            func.max(SearchLog.created_at).label('last_search')
+        ).group_by(
+            SearchLog.query
+        ).order_by(
+            func.max(SearchLog.created_at).desc()
         ).limit(recent_limit)
         
         result = await self.db.execute(recent_stmt)
