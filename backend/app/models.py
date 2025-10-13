@@ -16,9 +16,15 @@ class SearchItem(Base):
     category = Column(String(100), nullable=True, index=True)
     tags = Column(String(500), nullable=True)
     price = Column(Float, nullable=True)
-    popularity = Column(Integer, default=0)
+    popularity = Column(Integer, nullable=False, default=0, server_default="0")
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+    
+    def __init__(self, **kwargs):
+        # Set default value for popularity if not provided
+        if 'popularity' not in kwargs:
+            kwargs['popularity'] = 0
+        super().__init__(**kwargs)
     
     # Full-text search index
     __table_args__ = (
