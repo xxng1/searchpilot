@@ -1,0 +1,28 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: data-insertion-job
+  namespace: searchpilot
+spec:
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: data-insertion
+        image: xxng1/searchpilot-backend:latest
+        env:
+        - name: DATABASE_URL
+          value: "mysql+asyncmy://searchuser:searchpass@mysql:3306/searchpilot"
+        command: ["python", "scripts/generate_test_data.py"]
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+      initContainers:
+      - name: wait-for-mysql
+        image: busybox:1.35
+        command: ['sh', '-c', 'until nc -z mysql 3306; do echo waiting for mysql; sleep 2; done;']
+  backoffLimit: 3

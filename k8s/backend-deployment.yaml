@@ -19,13 +19,13 @@ spec:
       - name: ghcr-secret
       containers:
       - name: backend
-        image: searchpilot-backend:local
-        imagePullPolicy: Never
+        image: xxng1/searchpilot-backend:latest
+        imagePullPolicy: Always
         ports:
         - containerPort: 8000
         env:
         - name: DATABASE_URL
-          value: "mysql+asyncmy://searchuser:searchpass@host.docker.internal:3306/searchpilot"
+          value: "mysql+asyncmy://searchuser:searchpass@mysql:3306/searchpilot"
         - name: CORS_ORIGINS
           value: "http://localhost:3000"
         resources:
@@ -47,3 +47,7 @@ spec:
             port: 8000
           initialDelaySeconds: 5
           periodSeconds: 5
+      initContainers:
+      - name: wait-for-mysql
+        image: busybox:1.35
+        command: ['sh', '-c', 'until nc -z mysql 3306; do echo waiting for mysql; sleep 2; done;']

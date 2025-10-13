@@ -7,9 +7,11 @@ on:
     branches: [ main ]
 
 env:
-  REGISTRY: ghcr.io
+  REGISTRY_GHCR: ghcr.io
+  REGISTRY_DOCKERHUB: docker.io
   IMAGE_NAME_BACKEND: ${{ github.repository }}/backend
   IMAGE_NAME_FRONTEND: ${{ github.repository }}/frontend
+  DOCKERHUB_USERNAME: xxng1
 
 jobs:
   ###############################################################################
@@ -75,18 +77,35 @@ jobs:
       - name: 📥 코드 체크아웃
         uses: actions/checkout@v4
 
-      - name: 🔐 Docker 레지스트리 로그인
+      - name: 🔐 GHCR 레지스트리 로그인
         uses: docker/login-action@v3
         with:
-          registry: ${{ env.REGISTRY }}
+          registry: ${{ env.REGISTRY_GHCR }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: 📝 Docker 메타데이터 추출
-        id: meta-backend
+      - name: 🔐 DockerHub 레지스트리 로그인
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY_DOCKERHUB }}
+          username: ${{ env.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: 📝 Docker 메타데이터 추출 (GHCR)
+        id: meta-backend-ghcr
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_BACKEND }}
+          images: ${{ env.REGISTRY_GHCR }}/${{ env.IMAGE_NAME_BACKEND }}
+          tags: |
+            type=sha,prefix={{branch}}-
+            type=semver,pattern={{version}}
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: 📝 Docker 메타데이터 추출 (DockerHub)
+        id: meta-backend-dockerhub
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.DOCKERHUB_USERNAME }}/searchpilot-backend
           tags: |
             type=sha,prefix={{branch}}-
             type=semver,pattern={{version}}
@@ -97,14 +116,26 @@ jobs:
         with:
           context: ./backend
           push: true
-          tags: ${{ steps.meta-backend.outputs.tags }}
-          labels: ${{ steps.meta-backend.outputs.labels }}
+          tags: |
+            ${{ steps.meta-backend-ghcr.outputs.tags }}
+            ${{ steps.meta-backend-dockerhub.outputs.tags }}
+          labels: ${{ steps.meta-backend-ghcr.outputs.labels }}
 
-      - name: 📝 Frontend 메타데이터 추출
-        id: meta-frontend
+      - name: 📝 Frontend 메타데이터 추출 (GHCR)
+        id: meta-frontend-ghcr
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_FRONTEND }}
+          images: ${{ env.REGISTRY_GHCR }}/${{ env.IMAGE_NAME_FRONTEND }}
+          tags: |
+            type=sha,prefix={{branch}}-
+            type=semver,pattern={{version}}
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: 📝 Frontend 메타데이터 추출 (DockerHub)
+        id: meta-frontend-dockerhub
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.DOCKERHUB_USERNAME }}/searchpilot-frontend
           tags: |
             type=sha,prefix={{branch}}-
             type=semver,pattern={{version}}
@@ -115,21 +146,29 @@ jobs:
         with:
           context: ./frontend
           push: true
-          tags: ${{ steps.meta-frontend.outputs.tags }}
-          labels: ${{ steps.meta-frontend.outputs.labels }}
+          tags: |
+            ${{ steps.meta-frontend-ghcr.outputs.tags }}
+            ${{ steps.meta-frontend-dockerhub.outputs.tags }}
+          labels: ${{ steps.meta-frontend-ghcr.outputs.labels }}
 
       - name: 🎉 빌드 완료 알림
         if: success()
         run: |
           echo "## 🎉 CI 파이프라인 성공!" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 📦 빌드된 이미지" >> $GITHUB_STEP_SUMMARY
-          echo "- Backend: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_BACKEND }}:${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
-          echo "- Frontend: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_FRONTEND }}:${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "### 📦 빌드된 이미지 (GHCR)" >> $GITHUB_STEP_SUMMARY
+          echo "- Backend: ${{ env.REGISTRY_GHCR }}/${{ env.IMAGE_NAME_BACKEND }}:${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Frontend: ${{ env.REGISTRY_GHCR }}/${{ env.IMAGE_NAME_FRONTEND }}:${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📦 빌드된 이미지 (DockerHub)" >> $GITHUB_STEP_SUMMARY
+          echo "- Backend: ${{ env.DOCKERHUB_USERNAME }}/searchpilot-backend:${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Frontend: ${{ env.DOCKERHUB_USERNAME }}/searchpilot-frontend:${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### 🔗 이미지 링크" >> $GITHUB_STEP_SUMMARY
-          echo "- [Backend Image](https://github.com/${{ github.repository }}/pkgs/container/backend)" >> $GITHUB_STEP_SUMMARY
-          echo "- [Frontend Image](https://github.com/${{ github.repository }}/pkgs/container/frontend)" >> $GITHUB_STEP_SUMMARY
+          echo "- [GHCR Backend](https://github.com/${{ github.repository }}/pkgs/container/backend)" >> $GITHUB_STEP_SUMMARY
+          echo "- [GHCR Frontend](https://github.com/${{ github.repository }}/pkgs/container/frontend)" >> $GITHUB_STEP_SUMMARY
+          echo "- [DockerHub Backend](https://hub.docker.com/r/${{ env.DOCKERHUB_USERNAME }}/searchpilot-backend)" >> $GITHUB_STEP_SUMMARY
+          echo "- [DockerHub Frontend](https://hub.docker.com/r/${{ env.DOCKERHUB_USERNAME }}/searchpilot-frontend)" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "✅ **ArgoCD에서 자동 배포 준비 완료!**" >> $GITHUB_STEP_SUMMARY
 
