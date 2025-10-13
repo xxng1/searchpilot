@@ -1,4 +1,4 @@
-name: CI/CD Pipeline
+name: CI Pipeline
 
 on:
   push:
@@ -23,30 +23,30 @@ jobs:
     steps:
       - name: 📥 코드 체크아웃
         uses: actions/checkout@v4
-      
+
       - name: 🐍 Python 설정
         uses: actions/setup-python@v4
         with:
           python-version: '3.11'
           cache: 'pip'
-      
+
       - name: 📦 Python 의존성 설치
         run: |
           cd backend
           pip install -r requirements.txt
-      
+
       - name: 🧪 단위 테스트 (병렬 실행)
         run: |
           cd backend
           pytest tests/unit -n auto -v --tb=short --junit-xml=../test-results/unit-tests.xml
-      
+
       - name: 📊 테스트 결과 업로드
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: test-results
           path: test-results/
-      
+
       - name: ✅ 테스트 요약
         if: always()
         run: |
@@ -65,23 +65,23 @@ jobs:
     name: 🔨 Docker 이미지 빌드 및 푸시
     runs-on: ubuntu-latest
     needs: test
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    
+    if: github.event_name == 'push'
+
     permissions:
       contents: read
       packages: write
-    
+
     steps:
       - name: 📥 코드 체크아웃
         uses: actions/checkout@v4
-      
+
       - name: 🔐 Docker 레지스트리 로그인
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      
+
       - name: 📝 Docker 메타데이터 추출
         id: meta-backend
         uses: docker/metadata-action@v5
@@ -91,7 +91,7 @@ jobs:
             type=sha,prefix={{branch}}-
             type=semver,pattern={{version}}
             type=raw,value=latest,enable={{is_default_branch}}
-      
+
       - name: 🔨 Backend 이미지 빌드 및 푸시
         uses: docker/build-push-action@v5
         with:
@@ -99,7 +99,7 @@ jobs:
           push: true
           tags: ${{ steps.meta-backend.outputs.tags }}
           labels: ${{ steps.meta-backend.outputs.labels }}
-      
+
       - name: 📝 Frontend 메타데이터 추출
         id: meta-frontend
         uses: docker/metadata-action@v5
@@ -109,7 +109,7 @@ jobs:
             type=sha,prefix={{branch}}-
             type=semver,pattern={{version}}
             type=raw,value=latest,enable={{is_default_branch}}
-      
+
       - name: 🔨 Frontend 이미지 빌드 및 푸시
         uses: docker/build-push-action@v5
         with:
@@ -118,67 +118,25 @@ jobs:
           tags: ${{ steps.meta-frontend.outputs.tags }}
           labels: ${{ steps.meta-frontend.outputs.labels }}
 
-  ###############################################################################
-  # 3. Canary 배포 단계 (Argo Rollouts 트리거)
-  ###############################################################################
-  deploy:
-    name: 🚀 Canary 배포
-    runs-on: ubuntu-latest
-    needs: build
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    
-    steps:
-      - name: 📥 코드 체크아웃
-        uses: actions/checkout@v4
-      
-      - name: ⚙️ kubectl 설정
-        uses: azure/setup-kubectl@v3
-        with:
-          version: 'latest'
-      
-      - name: 🔐 Kubernetes 클러스터 인증
-        run: |
-          echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > kubeconfig
-          export KUBECONFIG=kubeconfig
-      
-      - name: 🚀 Argo Rollouts로 배포 트리거
-        run: |
-          export KUBECONFIG=kubeconfig
-          
-          # Update backend rollout
-          kubectl set image rollout/backend \
-            backend=${{ env.REGISTRY }}/${{ env.IMAGE_NAME_BACKEND }}:${{ github.sha }} \
-            -n searchpilot
-          
-          # Update frontend deployment
-          kubectl set image deployment/frontend \
-            frontend=${{ env.REGISTRY }}/${{ env.IMAGE_NAME_FRONTEND }}:${{ github.sha }} \
-            -n searchpilot
-          
-          echo "✅ Canary 배포 시작됨"
-          echo "   - 10% → 30% → 60% → 100% 트래픽 전환"
-          echo "   - 각 단계마다 자동 메트릭 분석"
-          echo "   - 이상 감지 시 자동 롤백"
-      
-      - name: 📊 배포 상태 모니터링
-        run: |
-          export KUBECONFIG=kubeconfig
-          kubectl argo rollouts status backend -n searchpilot --timeout 10m
-      
-      - name: 🎉 배포 완료 알림
+      - name: 🎉 빌드 완료 알림
         if: success()
         run: |
-          echo "## 🎉 Canary 배포 성공!" >> $GITHUB_STEP_SUMMARY
+          echo "## 🎉 CI 파이프라인 성공!" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📦 빌드된 이미지" >> $GITHUB_STEP_SUMMARY
           echo "- Backend: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_BACKEND }}:${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
           echo "- Frontend: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_FRONTEND }}:${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "모든 메트릭 분석을 통과하여 안정적으로 배포되었습니다." >> $GITHUB_STEP_SUMMARY
-      
-      - name: ❌ 배포 실패 시 롤백
+          echo "### 🔗 이미지 링크" >> $GITHUB_STEP_SUMMARY
+          echo "- [Backend Image](https://github.com/${{ github.repository }}/pkgs/container/backend)" >> $GITHUB_STEP_SUMMARY
+          echo "- [Frontend Image](https://github.com/${{ github.repository }}/pkgs/container/frontend)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ **ArgoCD에서 자동 배포 준비 완료!**" >> $GITHUB_STEP_SUMMARY
+
+      - name: ❌ 빌드 실패 알림
         if: failure()
         run: |
-          export KUBECONFIG=kubeconfig
-          kubectl argo rollouts abort backend -n searchpilot
-          echo "❌ 배포 실패. 자동 롤백 수행됨." >> $GITHUB_STEP_SUMMARY
-
+          echo "## ❌ CI 파이프라인 실패" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "빌드 또는 테스트 단계에서 오류가 발생했습니다." >> $GITHUB_STEP_SUMMARY
+          echo "로그를 확인하여 문제를 해결해주세요." >> $GITHUB_STEP_SUMMARY

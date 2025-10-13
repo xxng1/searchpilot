@@ -1,0 +1,75 @@
+name: CD Pipeline
+
+on:
+  workflow_run:
+    workflows: ["CI Pipeline"]
+    types:
+      - completed
+    branches: [ main ]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME_BACKEND: ${{ github.repository }}/backend
+  IMAGE_NAME_FRONTEND: ${{ github.repository }}/frontend
+
+jobs:
+  ###############################################################################
+  # ArgoCD 배포 트리거 (로컬 Kubernetes 환경)
+  ###############################################################################
+  deploy:
+    name: 🚀 ArgoCD 배포 트리거
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+
+    steps:
+      - name: 📥 코드 체크아웃
+        uses: actions/checkout@v4
+
+      - name: 🎯 ArgoCD 배포 트리거
+        run: |
+          echo "## 🚀 ArgoCD 배포 트리거" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📦 배포할 이미지" >> $GITHUB_STEP_SUMMARY
+          echo "- Backend: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_BACKEND }}:${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Frontend: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_FRONTEND }}:${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🔄 ArgoCD 동작 방식" >> $GITHUB_STEP_SUMMARY
+          echo "1. **자동 감지**: ArgoCD가 새로운 이미지 태그를 감지" >> $GITHUB_STEP_SUMMARY
+          echo "2. **동기화**: 로컬 Kubernetes 클러스터에 자동 배포" >> $GITHUB_STEP_SUMMARY
+          echo "3. **모니터링**: ArgoCD UI에서 배포 상태 확인 가능" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📋 ArgoCD 설정 필요사항" >> $GITHUB_STEP_SUMMARY
+          echo "- ArgoCD Application 생성" >> $GITHUB_STEP_SUMMARY
+          echo "- Git Repository 연동" >> $GITHUB_STEP_SUMMARY
+          echo "- Auto-Sync 활성화" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ **ArgoCD가 자동으로 배포를 처리합니다!**" >> $GITHUB_STEP_SUMMARY
+
+      - name: 🔗 ArgoCD 접속 정보
+        run: |
+          echo "## 🔗 ArgoCD 접속 정보" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 로컬 환경" >> $GITHUB_STEP_SUMMARY
+          echo "- ArgoCD UI: http://localhost:8080" >> $GITHUB_STEP_SUMMARY
+          echo "- Admin 계정: admin / 초기 패스워드 확인 필요" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### kubectl 명령어" >> $GITHUB_STEP_SUMMARY
+          echo "```bash" >> $GITHUB_STEP_SUMMARY
+          echo "# ArgoCD 상태 확인" >> $GITHUB_STEP_SUMMARY
+          echo "kubectl get applications -n argocd" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "# 배포 상태 확인" >> $GITHUB_STEP_SUMMARY
+          echo "kubectl get pods -n searchpilot" >> $GITHUB_STEP_SUMMARY
+          echo "```" >> $GITHUB_STEP_SUMMARY
+
+      - name: 📊 배포 완료 알림
+        if: success()
+        run: |
+          echo "## 🎉 CD 파이프라인 완료!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "ArgoCD가 새로운 이미지를 감지하여 자동 배포를 시작합니다." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 다음 단계" >> $GITHUB_STEP_SUMMARY
+          echo "1. ArgoCD UI에서 배포 진행상황 확인" >> $GITHUB_STEP_SUMMARY
+          echo "2. 로컬 Kubernetes 클러스터에서 서비스 확인" >> $GITHUB_STEP_SUMMARY
+          echo "3. 애플리케이션 접속 테스트" >> $GITHUB_STEP_SUMMARY
