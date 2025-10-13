@@ -16,9 +16,17 @@ function App() {
     setSearchParams(params)
   }
 
+  const handleReset = () => {
+    setSearchParams({
+      q: '',
+      page: 1,
+      size: 20,
+    })
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
-      <Header />
+      <Header onLogoClick={handleReset} />
       
       <main className="container mx-auto px-4 py-8">
         <div className="max-w-6xl mx-auto">
@@ -27,12 +35,10 @@ function App() {
             <SearchBar onSearch={handleSearch} />
           </div>
 
-          {/* Search Stats */}
-          {searchParams.q && (
-            <div className="mb-6">
-              <SearchStats />
-            </div>
-          )}
+          {/* Search Stats - Always visible */}
+          <div className="mb-6">
+            <SearchStats />
+          </div>
 
           {/* Search Results */}
           {searchParams.q && (
