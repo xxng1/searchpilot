@@ -19,8 +19,8 @@ spec:
       - name: ghcr-secret
       containers:
       - name: backend
-        image: ghcr.io/xxng1/searchpilot/backend:latest
-        imagePullPolicy: Always
+        image: searchpilot-backend:local
+        imagePullPolicy: Never
         ports:
         - containerPort: 8000
         env:
