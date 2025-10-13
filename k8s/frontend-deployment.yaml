@@ -19,7 +19,7 @@ spec:
       - name: frontend
         image: xxng/searchpilot-frontend:latest
         ports:
-        - containerPort: 3000
+        - containerPort: 80
         env:
         - name: VITE_API_URL
           value: "http://backend:8000"
