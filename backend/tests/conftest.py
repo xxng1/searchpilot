@@ -1,5 +1,6 @@
 import pytest
 import asyncio
+import random
 from typing import AsyncGenerator
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from httpx import AsyncClient
@@ -79,8 +80,8 @@ async def sample_items(db_session: AsyncSession, faker_instance: Faker):
             description=faker_instance.text(max_nb_chars=200),
             category=faker_instance.random_element(categories),
             tags=','.join(faker_instance.words(nb=3)),
-            price=round(faker_instance.random.uniform(1000, 1000000), 2),
-            popularity=faker_instance.random_int(0, 1000)
+            price=round(random.uniform(1000, 1000000), 2),
+            popularity=random.randint(0, 1000)
         )
         items.append(item)
         db_session.add(item)
