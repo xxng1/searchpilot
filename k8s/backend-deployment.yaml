@@ -15,9 +15,12 @@ spec:
       labels:
         app: backend
     spec:
+      imagePullSecrets:
+      - name: ghcr-secret
       containers:
       - name: backend
         image: ghcr.io/xxng1/searchpilot/backend:latest
+        imagePullPolicy: Always
         ports:
         - containerPort: 8000
         env:
