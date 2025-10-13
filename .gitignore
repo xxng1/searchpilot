@@ -58,6 +58,7 @@ logs/
 test-results/
 playwright-report/
 coverage/
+sample_queries.txt
 
 # K8s secrets
 k8s/secrets/
