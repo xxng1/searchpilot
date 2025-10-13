@@ -1,8 +1,0 @@
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: searchpilot
-  labels:
-    name: searchpilot
-    environment: production
-
