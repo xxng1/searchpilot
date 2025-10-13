@@ -1,7 +1,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: data-insertion-job
+  name: data-insertion-job-v2
   namespace: searchpilot
 spec:
   template:
@@ -9,10 +9,12 @@ spec:
       restartPolicy: Never
       containers:
       - name: data-insertion
-        image: xxng1/searchpilot-backend:latest
+        image: xxng/searchpilot-backend:latest
         env:
         - name: DATABASE_URL
           value: "mysql+asyncmy://searchuser:searchpass@mysql:3306/searchpilot"
+        - name: PYTHONPATH
+          value: "/app"
         command: ["python", "scripts/generate_test_data.py"]
         resources:
           requests:
