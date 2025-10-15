@@ -5,12 +5,30 @@ metadata:
   namespace: argocd
   finalizers:
     - resources-finalizer.argocd.argoproj.io
+  annotations:
+    # 1. 업데이트할 이미지 목록과 alias 정의
+    argocd-image-updater.argoproj.io/image-list: |
+      backend=xxng/searchpilot-backend,
+      frontend=xxng/searchpilot-frontend
+    
+    # 2. 가장 최근에 푸시된 태그를 사용하도록 설정
+    argocd-image-updater.argoproj.io/backend.update-strategy: newest-build
+    argocd-image-updater.argoproj.io/frontend.update-strategy: newest-build
+    
+    # 3. 유효한 태그 패턴 정의 (latest, main-*, develop-* 태그 허용)
+    argocd-image-updater.argoproj.io/backend.allow-tags: regexp:^(latest|main-.*|develop-.*)$
+    argocd-image-updater.argoproj.io/frontend.allow-tags: regexp:^(latest|main-.*|develop-.*)$
+    
+    # 4. Kustomize 이미지 태그 업데이트 위치 지정
+    argocd-image-updater.argoproj.io/backend.kustomize.image: xxng/searchpilot-backend
+    argocd-image-updater.argoproj.io/frontend.kustomize.image: xxng/searchpilot-frontend
 spec:
   project: default
   source:
     repoURL: https://github.com/xxng1/searchpilot
     targetRevision: HEAD
     path: k8s
+    kustomize: {}
   destination:
     server: https://kubernetes.default.svc
     namespace: searchpilot

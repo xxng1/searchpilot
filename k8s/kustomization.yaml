@@ -1,0 +1,20 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - namespace.yaml
+  - ingress-controller.yaml
+  - backend-deployment.yaml
+  - frontend-deployment.yaml
+  - services.yaml
+  - mysql-deployment.yaml
+  - mysql-service.yaml
+  - data-insertion-job-v2.yaml
+  - ingress.yaml
+  - argocd-application.yaml
+
+images:
+  - name: xxng/searchpilot-backend
+    newTag: latest
+  - name: xxng/searchpilot-frontend
+    newTag: latest
