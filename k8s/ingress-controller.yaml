@@ -51,6 +51,7 @@ rules:
   - serviceaccounts
   - events
   verbs:
+  - get
   - list
   - watch
 - apiGroups:
@@ -142,6 +143,7 @@ rules:
   - secrets
   - namespaces
   verbs:
+  - get
   - list
   - watch
 - apiGroups:
