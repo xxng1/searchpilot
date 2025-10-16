@@ -1,0 +1,33 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: backend-analysis
+  namespace: searchpilot
+spec:
+  args:
+  - name: service-name
+  - name: canary-replicas
+  metrics:
+  - name: success-rate
+    successCondition: result[0] >= 0.95
+    provider:
+      prometheus:
+        address: http://prometheus.monitoring.svc.cluster.local:9090
+        query: |
+          sum(rate(http_requests_total{job="{{args.service-name}}",status=~"2.*"}[5m])) /
+          sum(rate(http_requests_total{job="{{args.service-name}}"}[5m]))
+  - name: error-rate
+    successCondition: result[0] <= 0.05
+    provider:
+      prometheus:
+        address: http://prometheus.monitoring.svc.cluster.local:9090
+        query: |
+          sum(rate(http_requests_total{job="{{args.service-name}}",status=~"5.*"}[5m])) /
+          sum(rate(http_requests_total{job="{{args.service-name}}"}[5m]))
+  - name: response-time
+    successCondition: result[0] <= 0.5
+    provider:
+      prometheus:
+        address: http://prometheus.monitoring.svc.cluster.local:9090
+        query: |
+          histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{job="{{args.service-name}}"}[5m])) by (le))

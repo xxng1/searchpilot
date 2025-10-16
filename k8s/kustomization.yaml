@@ -4,7 +4,9 @@ kind: Kustomization
 resources:
   - namespace.yaml
   - ingress-controller.yaml
-  - backend-deployment.yaml
+  - backend-rollout.yaml
+  - backend-analysis-template.yaml
+  - backend-services.yaml
   - frontend-deployment.yaml
   - services.yaml
   - mysql-deployment.yaml

@@ -17,35 +17,35 @@ spec:
         pathType: Prefix
         backend:
           service:
-            name: backend
+            name: backend-stable
             port:
               number: 8000
       - path: /docs
         pathType: Prefix
         backend:
           service:
-            name: backend
+            name: backend-stable
             port:
               number: 8000
       - path: /health
         pathType: Prefix
         backend:
           service:
-            name: backend
+            name: backend-stable
             port:
               number: 8000
       - path: /openapi.json
         pathType: Prefix
         backend:
           service:
-            name: backend
+            name: backend-stable
             port:
               number: 8000
       - path: /metrics
         pathType: Prefix
         backend:
           service:
-            name: backend
+            name: backend-stable
             port:
               number: 8000
       - path: /
