@@ -75,6 +75,6 @@ data:
       
       - job_name: 'backend'
         static_configs:
-          - targets: ['backend-stable:8000', 'backend-canary:8000']
+          - targets: ['backend-stable.searchpilot.svc.cluster.local:8000', 'backend-canary.searchpilot.svc.cluster.local:8000']
         metrics_path: '/metrics'
         scrape_interval: 5s
