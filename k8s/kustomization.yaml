@@ -4,6 +4,7 @@ kind: Kustomization
 resources:
   - namespace.yaml
   - ingress-controller.yaml
+  - prometheus-deployment.yaml
   - backend-rollout.yaml
   - backend-analysis-template.yaml
   - backend-services.yaml
