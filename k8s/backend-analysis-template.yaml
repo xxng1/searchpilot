@@ -8,26 +8,10 @@ spec:
   - name: service-name
   - name: canary-replicas
   metrics:
-  - name: success-rate
-    successCondition: result[0] >= 0.95
+  - name: health-check
+    successCondition: result[0] >= 1
     provider:
       prometheus:
         address: http://prometheus.monitoring.svc.cluster.local:9090
         query: |
-          sum(rate(http_requests_total{job="backend"}[5m])) /
-          sum(rate(http_requests_total{job="backend"}[5m]))
-  - name: error-rate
-    successCondition: result[0] <= 0.05
-    provider:
-      prometheus:
-        address: http://prometheus.monitoring.svc.cluster.local:9090
-        query: |
-          sum(rate(http_requests_total{job="backend"}[5m])) /
-          sum(rate(http_requests_total{job="backend"}[5m]))
-  - name: response-time
-    successCondition: result[0] <= 0.5
-    provider:
-      prometheus:
-        address: http://prometheus.monitoring.svc.cluster.local:9090
-        query: |
-          histogram_quantile(0.95, sum(rate(http_request_duration_highr_seconds_bucket{job="backend"}[5m])) by (le))
+          up{job="backend"}
