@@ -321,4 +321,5 @@ MIT License
 - **목적**: ArgoCD Image Updater 자동 이미지 업데이트 테스트
 
 - test: argocd rollouts test 2025-10-17- 09🕚
+- test2: argocd rollouts test 2025-10-17- 0916
 
