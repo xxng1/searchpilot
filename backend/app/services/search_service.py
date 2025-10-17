@@ -1,11 +1,12 @@
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, or_, and_, text
+from sqlalchemy import select, func, or_, and_, text, desc
 from typing import List, Tuple, Optional
 from app.models import SearchItem, SearchLog
-from app.schemas import SearchQuery
+from app.schemas import SearchQuery, PopularQueries, SearchAnalytics
 import time
 import logging
 import re
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -220,4 +221,92 @@ class SearchService:
         except Exception as e:
             logger.error(f"Failed to log search: {e}")
             await self.db.rollback()
+
+    async def get_related_suggestions(self, query: str, limit: int = 5) -> List[str]:
+        """관련 검색어 제안 (새로운 기능 - 카나리 배포)"""
+        try:
+            # 유사한 검색어 찾기 (간단한 구현)
+            stmt = select(SearchLog.query, func.count(SearchLog.query).label('count'))\
+                .where(SearchLog.query != query)\
+                .where(SearchLog.query.like(f"%{query[:3]}%"))\
+                .group_by(SearchLog.query)\
+                .order_by(desc('count'))\
+                .limit(limit)
+            
+            result = await self.db.execute(stmt)
+            suggestions = [row[0] for row in result.fetchall()]
+            
+            # 기본 제안어가 부족하면 일반적인 제안어 추가
+            if len(suggestions) < limit:
+                default_suggestions = ["인기 상품", "할인 상품", "신상품", "베스트셀러", "추천 상품"]
+                for suggestion in default_suggestions:
+                    if suggestion not in suggestions and len(suggestions) < limit:
+                        suggestions.append(suggestion)
+            
+            return suggestions[:limit]
+        except Exception as e:
+            logger.error(f"Failed to get related suggestions: {e}")
+            return []
+
+    async def get_popular_queries(self, limit: int = 10) -> List[PopularQueries]:
+        """인기 검색어 조회 (새로운 기능 - 카나리 배포)"""
+        try:
+            stmt = select(
+                SearchLog.query,
+                func.count(SearchLog.query).label('count'),
+                func.max(SearchLog.created_at).label('last_searched')
+            )\
+                .group_by(SearchLog.query)\
+                .order_by(desc('count'))\
+                .limit(limit)
+            
+            result = await self.db.execute(stmt)
+            popular_queries = []
+            
+            for row in result.fetchall():
+                popular_queries.append(PopularQueries(
+                    query=row[0],
+                    count=row[1],
+                    last_searched=row[2]
+                ))
+            
+            return popular_queries
+        except Exception as e:
+            logger.error(f"Failed to get popular queries: {e}")
+            return []
+
+    async def get_search_analytics(self, query: str) -> SearchAnalytics:
+        """검색 분석 정보 조회 (새로운 기능 - 카나리 배포)"""
+        try:
+            # 해당 쿼리의 검색 통계 조회
+            stmt = select(
+                func.count(SearchLog.id).label('total_searches'),
+                func.avg(SearchLog.response_time_ms).label('avg_response_time'),
+                func.max(SearchLog.created_at).label('last_searched')
+            ).where(SearchLog.query == query)
+            
+            result = await self.db.execute(stmt)
+            row = result.fetchone()
+            
+            # 결과 개수 조회
+            count_stmt = select(func.count()).where(SearchItem.title.like(f"%{query}%"))
+            count_result = await self.db.execute(count_stmt)
+            result_count = count_result.scalar() or 0
+            
+            return SearchAnalytics(
+                query=query,
+                result_count=result_count,
+                response_time_ms=float(row[1] or 0),
+                timestamp=row[2] or datetime.now(),
+                user_agent=None,  # 실제 구현 시 추가
+                ip_address=None   # 실제 구현 시 추가
+            )
+        except Exception as e:
+            logger.error(f"Failed to get search analytics: {e}")
+            return SearchAnalytics(
+                query=query,
+                result_count=0,
+                response_time_ms=0.0,
+                timestamp=datetime.now()
+            )
 

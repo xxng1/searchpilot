@@ -51,6 +51,10 @@ class SearchResponse(BaseModel):
     items: List[SearchItem]
     response_time_ms: float
     facets: Optional[dict] = None
+    # 새로운 메타데이터 추가
+    search_id: Optional[str] = None
+    cache_hit: bool = False
+    suggestions: Optional[List[str]] = None
 
 
 class AutocompleteResponse(BaseModel):
@@ -79,4 +83,21 @@ class HealthCheck(BaseModel):
     version: str
     database: str
     timestamp: datetime
+
+
+class SearchAnalytics(BaseModel):
+    """검색 분석 스키마"""
+    query: str
+    result_count: int
+    response_time_ms: float
+    timestamp: datetime
+    user_agent: Optional[str] = None
+    ip_address: Optional[str] = None
+
+
+class PopularQueries(BaseModel):
+    """인기 검색어 스키마"""
+    query: str
+    count: int
+    last_searched: datetime
 

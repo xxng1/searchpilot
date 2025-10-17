@@ -60,13 +60,24 @@ app.include_router(search.router)
 
 @app.get("/", tags=["root"])
 async def root():
-    """루트 엔드포인트"""
+    """루트 엔드포인트 - v2.0 (카나리 배포)"""
     return {
         "name": settings.APP_NAME,
         "version": settings.APP_VERSION,
         "status": "running",
+        "deployment": "canary",
+        "features": [
+            "enhanced_search_analytics",
+            "related_suggestions", 
+            "popular_queries",
+            "search_tracking"
+        ],
         "docs": "/docs",
-        "metrics": "/metrics"
+        "metrics": "/metrics",
+        "new_apis": [
+            "/api/search/popular",
+            "/api/search/analytics"
+        ]
     }
 
 
