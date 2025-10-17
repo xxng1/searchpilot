@@ -6,7 +6,13 @@ metadata:
   annotations:
     argocd.argoproj.io/sync-options: Replace=true
 spec:
+  selector:
+    matchLabels:
+      app: data-insertion-job-v2
   template:
+    metadata:
+      labels:
+        app: data-insertion-job-v2
     spec:
       restartPolicy: Never
       initContainers:
