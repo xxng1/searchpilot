@@ -3,10 +3,16 @@ kind: Job
 metadata:
   name: data-insertion-job-v2
   namespace: searchpilot
+  annotations:
+    argocd.argoproj.io/sync-options: Replace=true
 spec:
   template:
     spec:
       restartPolicy: Never
+      initContainers:
+      - name: wait-for-mysql
+        image: busybox:1.35
+        command: ['sh', '-c', 'until nc -z mysql 3306; do echo waiting for mysql; sleep 2; done;']
       containers:
       - name: data-insertion
         image: xxng/searchpilot-backend:latest
@@ -23,8 +29,4 @@ spec:
           limits:
             memory: "512Mi"
             cpu: "500m"
-      initContainers:
-      - name: wait-for-mysql
-        image: busybox:1.35
-        command: ['sh', '-c', 'until nc -z mysql 3306; do echo waiting for mysql; sleep 2; done;']
   backoffLimit: 3
