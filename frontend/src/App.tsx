@@ -22,6 +22,8 @@ function App() {
       page: 1,
       size: 20,
     })
+    // 홈으로 이동하면서 새로고침
+    window.location.reload()
   }
 
   return (
