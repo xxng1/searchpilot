@@ -70,7 +70,14 @@ function testBasicSearch() {
   const result = check(response, {
     'search status is 200': (r) => r.status === 200,
     'search response time < 2s': (r) => r.timings.duration < 2000, // 관대한 기준
-    'search has items': (r) => JSON.parse(r.body).hasOwnProperty('items'),
+    'search has items': (r) => {
+      try {
+        const body = JSON.parse(r.body);
+        return body && typeof body === 'object' && body.hasOwnProperty('items');
+      } catch (e) {
+        return false;
+      }
+    },
   });
   
   errorRate.add(!result);
@@ -120,7 +127,14 @@ function testAutocomplete() {
   const result = check(response, {
     'autocomplete status is 200': (r) => r.status === 200,
     'autocomplete response time < 500ms': (r) => r.timings.duration < 500, // 관대한 기준
-    'autocomplete has suggestions': (r) => JSON.parse(r.body).hasOwnProperty('suggestions'),
+    'autocomplete has suggestions': (r) => {
+      try {
+        const body = JSON.parse(r.body);
+        return body && typeof body === 'object' && body.hasOwnProperty('suggestions');
+      } catch (e) {
+        return false;
+      }
+    },
   });
   
   errorRate.add(!result);
