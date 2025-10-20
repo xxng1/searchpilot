@@ -152,7 +152,14 @@ function testPagination() {
   
   check(response, {
     'pagination search status is 200': (r) => r.status === 200,
-    'pagination returns correct page': (r) => JSON.parse(r.body).page === page,
+    'pagination returns correct page': (r) => {
+      try {
+        const body = JSON.parse(r.body);
+        return body && typeof body === 'object' && body.page === page;
+      } catch (e) {
+        return false;
+      }
+    },
   });
   
   errorRate.add(response.status !== 200);
