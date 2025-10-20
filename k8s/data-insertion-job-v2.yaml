@@ -6,6 +6,9 @@ metadata:
   annotations:
     argocd.argoproj.io/sync-options: Replace=true
 spec:
+  selector:
+    matchLabels:
+      job-name: data-insertion-job-v2 # 템플릿의 레이블과 일치해야 함
   template:
     metadata:
       labels:
