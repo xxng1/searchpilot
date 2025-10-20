@@ -59,7 +59,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Configure Prometheus metrics
+# Configure Prometheus metrics 
 Instrumentator().instrument(app).expose(app)
 
 # Include routers
