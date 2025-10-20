@@ -5,6 +5,7 @@ metadata:
   namespace: searchpilot
   annotations:
     argocd.argoproj.io/sync-options: Replace=true
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
 spec:
   template:
     metadata:
