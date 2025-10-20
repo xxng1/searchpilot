@@ -36,16 +36,31 @@ jobs:
           cd backend
           pip install -r requirements.txt
 
-      - name: 🧪 단위 테스트 (300건)
+      - name: ⚡ k6 설치
         run: |
-          cd backend
-          pytest tests/unit -n 16 -v --tb=short --junit-xml=../test-results/unit-tests.xml
+          sudo gpg -k
+          sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update
+          sudo apt-get install k6
 
-      - name: 📊 단위 테스트 결과 업로드
+      - name: ⚡ 성능 테스트 (200건)
+        env:
+          API_URL: http://localhost:8000
+          DATABASE_URL: sqlite:///./test.db
+        run: |
+          # Start backend for performance tests (without MySQL)
+          cd backend
+          uvicorn app.main:app --host 0.0.0.0 --port 8000 &
+          sleep 15
+          cd tests/performance
+          k6 run --quiet load_test.js
+
+      - name: 📊 성능 테스트 결과 업로드
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: unit-test-results
+          name: performance-test-results
           path: test-results/
 
   ###############################################################################
