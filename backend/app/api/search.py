@@ -91,6 +91,7 @@ async def search(
         response_time = 0.001
         facets = {"categories": ["Test"], "price_ranges": ["0-1000"]}
         suggestions = [f"{q} related", f"{q} suggestion"]
+        service = None  # No service for mock data
     else:
         service = SearchService(db)
         items, total, response_time = await service.search(search_query)
@@ -103,9 +104,25 @@ async def search(
     
     # Highlight search terms
     highlighted_items = []
+    # Use service.highight_text if service exists, otherwise fallback simple highlighter
+    def _fallback_highlight(title: str, query: str) -> str:
+        try:
+            return title.replace(query, f"[{query}]") if title and query else title
+        except Exception:
+            return title
+
+    highlight_text = None
+    if service is not None:
+        try:
+            highlight_text = service.highlight_text
+        except Exception:
+            highlight_text = _fallback_highlight
+    else:
+        highlight_text = _fallback_highlight
+
     for item in items:
         item_dict = SearchItemSchema.model_validate(item).model_dump()
-        item_dict['highlight'] = service.highlight_text(item.title, q)
+        item_dict['highlight'] = highlight_text(item_dict.get('title', ''), q)
         highlighted_items.append(SearchItemSchema(**item_dict))
     
     total_pages = (total + size - 1) // size
