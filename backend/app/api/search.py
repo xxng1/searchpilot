@@ -75,22 +75,30 @@ async def search(
     
     # Check if database is available (for performance tests)
     if os.getenv("SKIP_DB_INIT"):
-        # Return mock data for performance tests
-        items = [
-            {
-                "id": 1,
-                "title": f"Mock Item for {q}",
-                "description": f"This is a mock item for testing performance with query: {q}",
-                "price": 1000,
-                "category": "Test",
+        # Return comprehensive mock data for performance tests
+        import random
+        
+        # Generate multiple mock items based on query
+        mock_items = []
+        for i in range(min(10, max(1, len(q) % 5 + 1))):  # 1-10 items based on query
+            mock_items.append({
+                "id": i + 1,
+                "title": f"Mock {q} Item {i+1}",
+                "description": f"This is a comprehensive mock item for testing performance with query: {q}. Item number {i+1}.",
+                "price": random.randint(100, 10000),
+                "category": random.choice(["전자제품", "의류", "도서", "식품", "가구", "스포츠", "완구", "화장품"]),
                 "created_at": "2024-01-01T00:00:00Z",
                 "updated_at": "2024-01-01T00:00:00Z"
-            }
-        ]
-        total = 1
+            })
+        
+        items = mock_items
+        total = len(mock_items)
         response_time = 0.001
-        facets = {"categories": ["Test"], "price_ranges": ["0-1000"]}
-        suggestions = [f"{q} related", f"{q} suggestion"]
+        facets = {
+            "categories": ["전자제품", "의류", "도서", "식품", "가구", "스포츠", "완구", "화장품"],
+            "price_ranges": ["0-1000", "1000-5000", "5000-10000", "10000+"]
+        }
+        suggestions = [f"{q} related", f"{q} suggestion", f"{q} alternative", f"{q} similar", f"{q} popular"]
         service = None  # No service for mock data
     else:
         service = SearchService(db)
@@ -166,8 +174,13 @@ async def autocomplete(
     
     # Check if database is available (for performance tests)
     if os.getenv("SKIP_DB_INIT"):
-        # Return mock suggestions for performance tests
-        suggestions = [f"{q} suggestion {i}" for i in range(1, min(limit + 1, 6))]
+        # Return comprehensive mock suggestions for performance tests
+        import random
+        base_suggestions = [
+            f"{q} 검색어", f"{q} 상품", f"{q} 아이템", f"{q} 제품", f"{q} 관련",
+            f"{q} 추천", f"{q} 인기", f"{q} 최신", f"{q} 할인", f"{q} 특가"
+        ]
+        suggestions = random.sample(base_suggestions, min(limit, len(base_suggestions)))
     else:
         service = SearchService(db)
         suggestions = await service.autocomplete(q, limit)
