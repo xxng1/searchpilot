@@ -12,7 +12,7 @@ resources:
   - services.yaml
   - mysql-deployment.yaml
   - mysql-service.yaml
-  - data-insertion-job-v2.yaml
+  - data-insertion-job-v3.yaml
   - ingress.yaml
   - argocd-application.yaml
 
