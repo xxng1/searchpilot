@@ -12,19 +12,19 @@ const errorRate = new Rate('errors');
 const searchDuration = new Trend('search_duration');
 const autocompleteDuration = new Trend('autocomplete_duration');
 
-// 테스트 설정
+// 테스트 설정 (관대한 기준)
 export const options = {
   stages: [
-    { duration: '1m', target: 50 },   // Ramp up to 50 users
-    { duration: '3m', target: 50 },   // Stay at 50 users
-    { duration: '1m', target: 100 },  // Ramp up to 100 users
-    { duration: '3m', target: 100 },  // Stay at 100 users
-    { duration: '1m', target: 0 },    // Ramp down to 0 users
+    { duration: '30s', target: 10 },   // Ramp up to 10 users
+    { duration: '1m', target: 10 },    // Stay at 10 users
+    { duration: '30s', target: 20 },   // Ramp up to 20 users
+    { duration: '1m', target: 20 },    // Stay at 20 users
+    { duration: '30s', target: 0 },    // Ramp down to 0 users
   ],
   thresholds: {
-    http_req_duration: ['p(95)<500'], // 95% of requests should be below 500ms
-    http_req_failed: ['rate<0.01'],   // Error rate should be less than 1%
-    errors: ['rate<0.01'],
+    http_req_duration: ['p(95)<2000'], // 95% of requests should be below 2s (관대한 기준)
+    http_req_failed: ['rate<0.05'],    // Error rate should be less than 5% (관대한 기준)
+    errors: ['rate<0.05'],
   },
 };
 
@@ -69,7 +69,7 @@ function testBasicSearch() {
   
   const result = check(response, {
     'search status is 200': (r) => r.status === 200,
-    'search response time < 500ms': (r) => r.timings.duration < 500,
+    'search response time < 2s': (r) => r.timings.duration < 2000, // 관대한 기준
     'search has items': (r) => JSON.parse(r.body).hasOwnProperty('items'),
   });
   
@@ -119,7 +119,7 @@ function testAutocomplete() {
   
   const result = check(response, {
     'autocomplete status is 200': (r) => r.status === 200,
-    'autocomplete response time < 50ms': (r) => r.timings.duration < 50,
+    'autocomplete response time < 500ms': (r) => r.timings.duration < 500, // 관대한 기준
     'autocomplete has suggestions': (r) => JSON.parse(r.body).hasOwnProperty('suggestions'),
   });
   

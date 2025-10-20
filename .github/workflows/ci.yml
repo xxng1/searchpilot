@@ -37,28 +37,43 @@ jobs:
           cd backend
           pip install -r requirements.txt
 
-      - name: 🧪 단위 테스트 (병렬 실행)
+      - name: 🧪 단위 테스트 (300건)
         run: |
           cd backend
-          pytest tests/unit -n auto -v --tb=short --junit-xml=../test-results/unit-tests.xml
+          pytest tests/unit -n 16 -v --tb=short --junit-xml=../test-results/unit-tests.xml
+
+      - name: 🔗 통합 테스트 (400건)
+        env:
+          DATABASE_URL: mysql+aiomysql://searchuser:searchpass@localhost:3306/searchpilot
+        run: |
+          cd backend
+          pytest tests/integration -n 8 -v --tb=short --junit-xml=../test-results/integration-tests.xml
+
+      - name: ⚡ k6 설치
+        run: |
+          sudo gpg -k
+          sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update
+          sudo apt-get install k6
+
+      - name: ⚡ 성능 테스트 (200건)
+        env:
+          API_URL: http://localhost:8000
+        run: |
+          # Start backend for performance tests
+          cd backend
+          uvicorn app.main:app --host 0.0.0.0 --port 8000 &
+          sleep 10
+          cd tests/performance
+          k6 run --quiet load_test.js
 
       - name: 📊 테스트 결과 업로드
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v3
         with:
           name: test-results
           path: test-results/
-
-      - name: ✅ 테스트 요약
-        if: always()
-        run: |
-          echo "## 테스트 결과 요약 🧪" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ 단위 테스트: ~300건" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Unit 테스트 완료!**" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "ℹ️ 통합/성능/E2E 테스트는 추후 활성화 예정" >> $GITHUB_STEP_SUMMARY
 
   ###############################################################################
   # 2. 빌드 및 푸시 단계

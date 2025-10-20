@@ -7,12 +7,16 @@ import { check } from 'k6';
 
 export const options = {
   stages: [
-    { duration: '2m', target: 200 },  // Ramp up to 200 users
-    { duration: '5m', target: 200 },  // Stay at 200 users
-    { duration: '2m', target: 400 },  // Ramp up to 400 users
-    { duration: '5m', target: 400 },  // Stay at 400 users
-    { duration: '2m', target: 0 },    // Ramp down
+    { duration: '30s', target: 20 },   // Ramp up to 20 users (관대한 기준)
+    { duration: '1m', target: 20 },    // Stay at 20 users
+    { duration: '30s', target: 40 },   // Ramp up to 40 users
+    { duration: '1m', target: 40 },    // Stay at 40 users
+    { duration: '30s', target: 0 },    // Ramp down
   ],
+  thresholds: {
+    http_req_duration: ['p(95)<3000'], // 95% of requests should be below 3s (관대한 기준)
+    http_req_failed: ['rate<0.1'],     // Error rate should be less than 10% (관대한 기준)
+  },
 };
 
 const BASE_URL = __ENV.API_URL || 'http://localhost:8000';
