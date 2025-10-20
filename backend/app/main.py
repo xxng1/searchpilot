@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from prometheus_fastapi_instrumentator import Instrumentator
 from contextlib import asynccontextmanager
 import logging
+import os
 from datetime import datetime
 
 from app.config import settings
@@ -23,14 +24,21 @@ async def lifespan(app: FastAPI):
     """애플리케이션 라이프사이클"""
     # Startup
     logger.info("Starting SearchPilot API...")
-    await init_db()
+    
+    # Skip database initialization if SKIP_DB_INIT is set
+    if not os.getenv("SKIP_DB_INIT"):
+        await init_db()
+    else:
+        logger.info("Skipping database initialization for performance tests")
+    
     logger.info("Application started successfully")
     
     yield
     
     # Shutdown
     logger.info("Shutting down SearchPilot API...")
-    await close_db()
+    if not os.getenv("SKIP_DB_INIT"):
+        await close_db()
     logger.info("Application shut down successfully")
 
 

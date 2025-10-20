@@ -47,9 +47,10 @@ jobs:
       - name: ⚡ 성능 테스트 (200건)
         env:
           API_URL: http://localhost:8000
-          DATABASE_URL: sqlite:///./test.db
+          DATABASE_URL: mysql+aiomysql://test:test@localhost:3306/test
+          SKIP_DB_INIT: "true"
         run: |
-          # Start backend for performance tests (without MySQL)
+          # Start backend for performance tests (skip database initialization)
           cd backend
           uvicorn app.main:app --host 0.0.0.0 --port 8000 &
           sleep 15
