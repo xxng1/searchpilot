@@ -1,7 +1,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: data-insertion-job-v2
+  name: data-insertion-job-v3
   namespace: searchpilot
   annotations:
     argocd.argoproj.io/sync-options: Replace=true
