@@ -83,7 +83,8 @@ async def search(
                 "description": f"This is a mock item for testing performance with query: {q}",
                 "price": 1000,
                 "category": "Test",
-                "created_at": "2024-01-01T00:00:00Z"
+                "created_at": "2024-01-01T00:00:00Z",
+                "updated_at": "2024-01-01T00:00:00Z"
             }
         ]
         total = 1
