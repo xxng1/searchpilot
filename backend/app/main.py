@@ -11,7 +11,7 @@ from app.database import init_db, close_db
 from app.api import search
 from app.schemas import HealthCheck
 
-# Configure logging  
+# Configure logging   
 logging.basicConfig(
     level=getattr(logging, settings.LOG_LEVEL),
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
