@@ -35,7 +35,7 @@ async def lifespan(app: FastAPI):
     
     yield
     
-    # Shutdown
+    # Shutdown 
     logger.info("Shutting down SearchPilot API...")
     if not os.getenv("SKIP_DB_INIT"):
         await close_db()
